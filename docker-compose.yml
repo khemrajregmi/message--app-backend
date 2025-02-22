@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build: ./backend
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend:/var/www
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=message_app
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # MySQL Service
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=message_app
+      - MYSQL_ROOT_PASSWORD=secret
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+
+  # PHP Worker for Artisan commands
+  worker:
+    build: ./backend
+    depends_on:
+      - mysql
+    command: bash -c "composer install && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
+    networks:
+      - app-network
+
+volumes:
+  mysql-data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
