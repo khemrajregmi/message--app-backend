@@ -1,59 +1,48 @@
 version: '3.8'
 
 services:
-  # Backend Service
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    restart: unless-stopped
     ports:
       - "8000:80"
     volumes:
-      - ./backend:/var/www
-    environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_DATABASE=message_app
-      - DB_USERNAME=root
-      - DB_PASSWORD=secret
-    depends_on:
-      - mysql
+      - ./backend/laravel-app:/var/www/html
     networks:
       - app-network
+    depends_on:
+      - db
 
-  # Frontend Service
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react_app
+    restart: unless-stopped
     ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    networks:
-      - app-network
-
-  # MySQL Service
-  mysql:
-    image: mysql:8.0
-    ports:
-      - "3306:3306"
-    environment:
-      - MYSQL_DATABASE=message_app
-      - MYSQL_ROOT_PASSWORD=secret
+      - "3000:3000"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - ./frontend/react-app:/app
     networks:
       - app-network
 
-  # PHP Worker for Artisan commands
-  worker:
-    build: ./backend
-    depends_on:
-      - mysql
-    command: bash -c "composer install && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: message_app
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - dbdata:/var/lib/mysql
     networks:
       - app-network
 
 volumes:
-  mysql-data:
-    driver: local
+  dbdata:
 
 networks:
   app-network:
